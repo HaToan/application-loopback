@@ -12,6 +12,8 @@ export type Window = {
    hwnd: string;
 };
 
+export type ProcessLoopbackMode = "includetree" | "excludetree";
+
 let executableRoot = path.resolve(__dirname, "../", "bin");
 
 /**
@@ -83,16 +85,22 @@ const spawnedAudioCaptures: Map<string, ChildProcessWithoutNullStreams> = new Ma
  *
  * @param processId - The unique identifier for the process whose audio should be captured.
  * @param options - Configuration options for the audio capture.
+ * @param options.mode - Loopback capture mode. `includetree` captures only target process tree,
+ * while `excludetree` captures everything except target process tree.
  * @param options.onData - Optional callback invoked with audio data as a `Uint8Array` whenever new data is available.
  * @throws {Error} If an audio capture for the specified `processId` is already running.
  * @returns The `processId` for which audio capture has started.
  */
-export function startAudioCapture(processId: string, options: { onData?: (data: Uint8Array) => void }) {
+export function startAudioCapture(
+   processId: string,
+   options: { mode?: ProcessLoopbackMode; onData?: (data: Uint8Array) => void } = {}
+) {
    if (spawnedAudioCaptures.has(processId)) {
       throw new Error(`An audio capture with process id of ${processId} is already started`);
    }
 
-   const cppProcess = spawn(`${path.resolve(__dirname, getLoopbackBinaryPath())}`, [processId], {
+   const captureMode = options.mode ?? "includetree";
+   const cppProcess = spawn(`${path.resolve(__dirname, getLoopbackBinaryPath())}`, [processId, captureMode], {
       detached: true,
       stdio: "pipe",
    });

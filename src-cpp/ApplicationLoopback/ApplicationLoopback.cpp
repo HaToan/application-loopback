@@ -9,17 +9,48 @@
 #include <fcntl.h>
 #include "LoopbackCapture.h"
 
+namespace
+{
+	void usage()
+	{
+		std::wcout
+			<< L"Usage:\n"
+			<< L"  ApplicationLoopback <processId> [includetree|excludetree]\n\n"
+			<< L"Default mode is includetree.\n";
+	}
+}
+
 int wmain(int argc, wchar_t* argv[])
 {
-	if (argc != 2)
+	if (argc < 2 || argc > 3)
 	{
+		usage();
 		return 0;
 	}
 
 	DWORD processId = wcstoul(argv[1], nullptr, 0);
 	if (processId == 0)
 	{
+		usage();
 		return 0;
+	}
+
+	bool includeProcessTree = true;
+	if (argc == 3)
+	{
+		if (wcscmp(argv[2], L"includetree") == 0)
+		{
+			includeProcessTree = true;
+		}
+		else if (wcscmp(argv[2], L"excludetree") == 0)
+		{
+			includeProcessTree = false;
+		}
+		else
+		{
+			usage();
+			return 0;
+		}
 	}
 
 	if (_setmode(_fileno(stdout), _O_BINARY) == -1)
@@ -29,7 +60,7 @@ int wmain(int argc, wchar_t* argv[])
 	}
 
 	CLoopbackCapture loopbackCapture;
-	HRESULT hr = loopbackCapture.StartCaptureAsync(processId, true);
+	HRESULT hr = loopbackCapture.StartCaptureAsync(processId, includeProcessTree);
 	if (FAILED(hr))
 	{
 		wil::unique_hlocal_string message;
